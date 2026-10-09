@@ -33,6 +33,17 @@ ros2 run belt_marking_control demo_scenario 8       # e.g. belt runs out
 `gazebo:=false` starts without Gazebo (faster; UI and RViz still show everything).
 Scenario 4 needs `multi_laser_sim.launch.py` in terminal 1.
 
+### Recording a GIF of a scenario
+
+```bash
+python3 tools/record_sim_gif.py --title "Belt runs out (4x)" --seconds 75 --speed 4 \
+    --out docs/images/sim_belt_runout.gif &
+ros2 run belt_marking_control demo_scenario 8
+```
+
+The recorder takes the Gazebo overview camera, adds a banner with state, counters and
+alarm, and plays fault phases at real speed so the alarm can be read.
+
 ## How a fault scenario works
 
 ```mermaid

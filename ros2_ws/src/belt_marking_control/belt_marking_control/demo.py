@@ -121,6 +121,7 @@ class Demo:
         self.spin_until(fut.done, 10.0)
         handle = fut.result()
         print(f'  job {job.job_id}: {"accepted" if handle.accepted else "REJECTED"}')
+        self.job_id = job.job_id
         self.result_future = handle.get_result_async() if handle.accepted else None
         return handle.accepted
 
@@ -135,8 +136,12 @@ class Demo:
               f'rejects {r.rejects}, {r.duration_s:.1f} s')
         return r
 
+    def this_job(self) -> bool:
+        """machine/state already describes the job started last (not the previous one)."""
+        return self.state is not None and self.state.job_id == getattr(self, 'job_id', None)
+
     def wait_marks(self, n, timeout=300.0):
-        return self.spin_until(lambda: self.state.marks_done >= n, timeout)
+        return self.spin_until(lambda: self.this_job() and self.state.marks_done >= n, timeout)
 
     def alarm_active(self, code):
         return any(a.code == code for a in self.state.active_alarms)
@@ -226,7 +231,7 @@ class Demo:
         self.say('Knife sticks before the end position',
                  'Gazebo: knife stops half way, returns. UI: E-301, HELD.')
         self.start(spec('DEMO-7', 5))
-        self.spin_until(lambda: self.state.pieces_cut >= 2, 120)
+        self.spin_until(lambda: self.this_job() and self.state.pieces_cut >= 2, 120)
         self.fault('knife_stuck_extend')
         self.check('E-301 and HELD', self.wait_state('HELD', 30) and self.alarm_active(301))
         self.say('Operator: free the knife, RESUME')
@@ -271,7 +276,7 @@ class Demo:
         self.say('E-stop during a cut',
                  'Gazebo: everything stops. UI: E-101, red light, ABORTED.')
         self.start(spec('DEMO-10', 5))
-        self.spin_until(lambda: self.state.phase == 'CUT_EXTEND', 120)
+        self.spin_until(lambda: self.this_job() and self.state.phase == 'CUT_EXTEND', 120)
         self.fault('estop')
         self.check('E-101 and ABORTED', self.wait_state('ABORTED', 5) and
                    self.alarm_active(101))

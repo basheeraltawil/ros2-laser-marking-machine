@@ -5,7 +5,19 @@ laser marking machines, and cuts the belt into pieces with a pneumatic knife. It
 **ROS 2 Humble** on a Raspberry Pi with a touchscreen, uses an **Arduino Mega** for
 real-time I/O, and includes a **Gazebo** simulation of the whole process.
 
-![Gazebo digital twin](docs/images/gazebo_overview.jpg)
+![Simulation: mark and cut every piece](docs/images/sim_production.gif)
+
+*Normal production in the Gazebo simulation: the belt is fed, the laser marks each
+label, the knife cuts it, and the piece drops onto the chute. The banner shows the live
+machine state and counters.*
+
+| Belt runs out → HELD → resume | E-stop during a cut → ABORTED → reset |
+|---|---|
+| ![Belt run-out](docs/images/sim_belt_runout.gif) | ![E-stop](docs/images/sim_estop.gif) |
+| E-401 at mark 3/10; after the refill the job continues to 10/10 without losing a count | everything stops (red); after release, CLEAR and RESET bring the machine back to IDLE |
+
+<sub>Recorded from the running simulation with `tools/record_sim_gif.py` while
+`demo_scenario 2 / 8 / 10` ran; fault phases play at real speed, the rest is 3–4× faster.</sub>
 
 | Touchscreen UI (simulation running) | |
 |---|---|

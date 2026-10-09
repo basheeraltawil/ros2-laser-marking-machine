@@ -117,7 +117,8 @@ def main():
     palette = os.path.join(tmp, 'palette.png')
     src = ['-framerate', str(rate), '-i', os.path.join(tmp, '%05d.png')]
     subprocess.run(['ffmpeg', '-v', 'error', '-y', *src, '-vf',
-                    f'fps={a.gif_fps},palettegen=max_colors=96:stats_mode=diff', palette], check=True)
+                    f'fps={a.gif_fps},palettegen=max_colors=96:stats_mode=diff', palette],
+                   check=True)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', *src, '-i', palette, '-lavfi',
                     f'fps={a.gif_fps}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4', a.out],
                    check=True)
