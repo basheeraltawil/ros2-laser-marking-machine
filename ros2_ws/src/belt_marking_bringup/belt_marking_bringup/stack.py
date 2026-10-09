@@ -88,6 +88,9 @@ def build(cfg_path: str, overlays, use_sim: bool, gazebo: bool, rviz: bool, ui: 
                                          'synthetic': not gazebo,
                                          # Gazebo QA camera: belt band after rotation
                                          'roi_across': [0.34, 0.66],
+                                         # Gazebo decals move in steps (twin update rate),
+                                         # so allow 3 mm there; the real belt uses 2 mm
+                                         'max_offset_mm': 3.0 if gazebo else 2.0,
                                          'mark_length_mm':
                                          float(cfg['geometry']['mark_length_mm']),
                                          'use_sim': use_sim}]))

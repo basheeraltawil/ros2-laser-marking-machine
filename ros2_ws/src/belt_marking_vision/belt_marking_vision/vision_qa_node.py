@@ -34,6 +34,7 @@ class PendingMark:
     belt_coord_mm: float
     best_dist: float = float('inf')
     best_image: Optional[np.ndarray] = None
+    best_signed_mm: float = 0.0        # mark centre - camera centre at that frame
     t_created: float = 0.0
 
 
@@ -68,6 +69,8 @@ class VisionQaNode(Node):
         p('detector', 'classic')         # classic (OpenCV rules) | yolo (ONNX model)
         p('yolo_model', '')              # path to the exported .onnx file
         p('yolo_conf', 0.4)
+        p('downstream_sign', -1)         # +1/-1: image x direction of belt travel
+        p('max_offset_mm', 2.0)          # allowed mark position error along the belt
         p('expected_text', '')           # fallback when the job has no mark_text
         p('use_sim', True)
         g = self.get_parameter
@@ -75,16 +78,20 @@ class VisionQaNode(Node):
         self.cam_x = g('camera_offset_mm').value
         self.mark_len = g('mark_length_mm').value
         self.window = g('window_mm').value
+        self.downstream_sign = 1 if g('downstream_sign').value >= 0 else -1
+        self.mm_per_px = g('mm_per_px').value
         self.rotate = int(g('rotate_deg').value) % 360
         self.expected = g('expected_text').value
         if g('detector').value == 'yolo':
             from .yolo_detector import YoloDetector, YoloInspector   # needs only OpenCV
             self.inspector = YoloInspector(
                 YoloDetector(g('yolo_model').value, conf=g('yolo_conf').value),
-                mm_per_px=g('mm_per_px').value, min_contrast=g('min_contrast').value)
+                mm_per_px=g('mm_per_px').value, min_contrast=g('min_contrast').value,
+                max_offset_mm=g('max_offset_mm').value)
         else:
             self.inspector = MarkInspector(InspectConfig(
                 mm_per_px=g('mm_per_px').value, min_contrast=g('min_contrast').value,
+                max_offset_mm=g('max_offset_mm').value,
                 roi_across=tuple(float(v) for v in g('roi_across').value)))
         self.state: Optional[MachineState] = None
         self.state_t = 0.0
@@ -142,12 +149,12 @@ class VisionQaNode(Node):
             if abs(dist) <= self.window and abs(dist) < pm.best_dist:
                 if img is None:
                     img = self._rotate(image_to_array(msg))
-                pm.best_dist, pm.best_image = abs(dist), img
+                pm.best_dist, pm.best_image, pm.best_signed_mm = abs(dist), img, dist
             if dist > self.window or time.monotonic() - pm.t_created > 120.0:
                 self.pending.remove(pm)
                 if pm.best_image is not None:
                     self._publish(pm.job_id, pm.label, pm.best_image,
-                                  self._text(pm.job_id, pm.label))
+                                  self._text(pm.job_id, pm.label), pm.best_signed_mm)
 
     def _rotate(self, img: np.ndarray) -> np.ndarray:
         k = {0: 0, 90: 1, 180: 2, 270: 3}.get(self.rotate, 0)
@@ -157,9 +164,12 @@ class VisionQaNode(Node):
         return self.expected or f'{job_id}-{label}'[-12:]
 
     # ----------------------------------------------------------------- output
-    def _publish(self, job_id, label, img, text):
+    def _publish(self, job_id, label, img, text, mark_offset_mm: float = 0.0):
         expected = text if (self.synthetic or self.expected) else ''
-        r = self.inspector.inspect(img, expected_text=expected)
+        # where the mark should be in this frame: the belt moves between frames, so the
+        # chosen frame is up to (speed / fps) away from the camera centre
+        expected_px = img.shape[1] / 2 + self.downstream_sign * mark_offset_mm / self.mm_per_px
+        r = self.inspector.inspect(img, expected_text=expected, expected_center_px=expected_px)
         msg = QualityResult(job_id=job_id, label_index=int(label), ok=r.ok,
                             score=float(r.score), text_read=r.text, reason=r.reason,
                             offset_mm=float(r.offset_mm))

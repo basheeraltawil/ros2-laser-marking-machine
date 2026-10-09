@@ -75,7 +75,7 @@ class GzTwinNode(Node):
         p('conveyor_end_m', 0.45)
         p('chute_drop_x_m', 0.53)
         p('max_pieces_in_bin', 15)
-        p('rate_hz', 10.0)
+        p('rate_hz', 30.0)                  # decal pose updates (lag = speed / rate)
         g = self.get_parameter
         world = g('world').value
         self.stations = [float(v) for v in g('station_offsets_mm').value]
