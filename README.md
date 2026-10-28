@@ -253,4 +253,4 @@ listed in [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md). The step-by-step checklist
 
 ## License and author
 
-MIT, see [LICENSE](LICENSE). Basheer Al-Tawil, AIBO Mechatronics.
+MIT, see [LICENSE](LICENSE). Basheer Al-Tawil, AIBOMECH.
